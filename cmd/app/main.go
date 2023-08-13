@@ -2,9 +2,13 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/idkroff/cf-balancer/internal/config"
+	mwLogger "github.com/idkroff/cf-balancer/internal/http-server/middleware/logger"
 )
 
 func main() {
@@ -12,7 +16,28 @@ func main() {
 
 	log := setupLogger(config.Env)
 
-	log.Info("starting service", slog.String("env", config.Env))
+	log.Info("starting cf-balancer", slog.String("env", config.Env))
+
+	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(mwLogger.New(log))
+	router.Use(middleware.Recoverer)
+
+	log.Info("starting server", slog.String("address", config.Address))
+	server := &http.Server{
+		Addr:         config.Address,
+		Handler:      router,
+		ReadTimeout:  config.HTTPServer.Timeout,
+		WriteTimeout: config.HTTPServer.Timeout,
+		IdleTimeout:  config.HTTPServer.IdleTimeout,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Error("failed to start server")
+	}
+
+	log.Error("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {
