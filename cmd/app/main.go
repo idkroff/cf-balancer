@@ -7,7 +7,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/idkroff/cf-balancer/internal/balancer"
 	"github.com/idkroff/cf-balancer/internal/config"
+	addRequestHandler "github.com/idkroff/cf-balancer/internal/http-server/handlers/request/add"
+	getRequestHandler "github.com/idkroff/cf-balancer/internal/http-server/handlers/request/get"
 	mwLogger "github.com/idkroff/cf-balancer/internal/http-server/middleware/logger"
 )
 
@@ -18,11 +21,18 @@ func main() {
 
 	log.Info("starting cf-balancer", slog.String("env", config.Env))
 
+	b := balancer.New(config.CFLimits, log)
+	b.StartQueueTimers()
+
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
 	router.Use(mwLogger.New(log))
 	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
+
+	router.Post("/request", addRequestHandler.New(log, b))
+	router.Get("/request/{UUID}", getRequestHandler.New(log, b))
 
 	log.Info("starting server", slog.String("address", config.Address))
 	server := &http.Server{

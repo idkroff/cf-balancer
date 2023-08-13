@@ -21,7 +21,10 @@ type HTTPServer struct {
 }
 
 type CFLimits struct {
-	LimitsByRoute map[string]int `yaml:"limits_by_route" env-required:"true"`
+	// Value of map is represented in seconds
+	// Zero for no timing
+	TimingsByRoute map[string]int `yaml:"timings_by_route" env-required:"true"`
+	MaxQueue       int            `yaml:"max_queue" env-default:"1000"`
 }
 
 func MustLoad() *Config {
