@@ -2,4 +2,5 @@ env: "local"
 http_server:
   address: "localhost:8080"
 cf_limits:
-  - register: 1000
+  limits_by_route:
+    register: 1000
